@@ -3,7 +3,8 @@ import pygame
 
 class Point:
 
-    def __init__(self, rad, pos, col, window):
+    def __init__(self, name, rad, pos, col, window):
+        self.name = name
         self.rad = rad
         self.pos = pos
         self.col = col
