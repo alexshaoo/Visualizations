@@ -26,29 +26,35 @@ CIRCLE_THICKNESS = 8
 CENTER = (WIDTH // 2, HEIGHT // 2)
 
 # Points on circumference (higher constant multiple smoother movement)
-NUMBER_OF_POINTS_ON_CIRCUMFERENCE = 10 * RADIUS
+NUMBER_OF_POINTS_ON_CIRCUMFERENCE = int(2 * math.pi * RADIUS)
 
-# Colour of lines, circles, and dots
+# Lines are red
 LINE_COL = [255, 0, 0]
+
+# Big Circle is white
 CIRCLE_COL = [255, 255, 255]
+
+# Dots/Points are blue
 DOT_COL = [0, 0, 255]
 
-# Cyclic Quadrilaterals always have 4 vertices
-pointA = Point("A", CIRCLE_THICKNESS, [CENTER[0], CENTER[1] - RADIUS], DOT_COL, window)
-pointB = Point("B", CIRCLE_THICKNESS, [CENTER[0] + RADIUS, CENTER[1]], DOT_COL, window)
-pointC = Point("C", CIRCLE_THICKNESS, [CENTER[0], CENTER[1] + RADIUS], DOT_COL, window)
-pointD = Point("D", CIRCLE_THICKNESS, [CENTER[0] - RADIUS, CENTER[1]], DOT_COL, window)
+# For theorems that involve 4 points
+pointA = Point("A", CIRCLE_THICKNESS, [CENTER[0] + RADIUS, CENTER[1]], DOT_COL, 0)
+pointB = Point("B", CIRCLE_THICKNESS, [CENTER[0], CENTER[1] - RADIUS], DOT_COL, 90)
+pointC = Point("C", CIRCLE_THICKNESS, [CENTER[0] - RADIUS, CENTER[1]], DOT_COL, 180)
+pointD = Point("D", CIRCLE_THICKNESS, [CENTER[0], CENTER[1] + RADIUS], DOT_COL, 270)
 points = [pointA, pointB, pointC, pointD]
 
 # Index of point that's selected, default to 1st point
-point_index = 1
+point_index = 0
 
 # Points found on the circumference of the circle
 # Selected point position defaults to these
 points_on_circumference = []
 
-# Radius of arc used for drawing angle
+# 'Radius' of arcsector used for drawing angle
 ARC_RADIUS = 25
+
+FONT = pygame.freetype.SysFont('Ubuntu', 16)
 
 
 # Calculate approximate points on circumference
@@ -58,10 +64,10 @@ def find_points_on_circumference(number_of_points):
     # Resets the list of points on the circumference
     points_on_circumference = []
 
-    for i in range(number_of_points):
+    for j in range(number_of_points):
         # X and Y values of the points
-        x = RADIUS * math.sin((2 * math.pi / number_of_points) * i) + CENTER[0]
-        y = RADIUS * math.cos((2 * math.pi / number_of_points) * i) + CENTER[1]
+        x = RADIUS * math.sin((2 * math.pi / number_of_points) * j) + CENTER[0]
+        y = RADIUS * math.cos((2 * math.pi / number_of_points) * j) + CENTER[1]
 
         # Round points to nearest int and add as a tuple of new points on the circumference
         points_on_circumference.append((int(x), int(y)))
@@ -115,7 +121,6 @@ def closest_point(pos):
 
 
 # Calculates angle between a line and the positive x axis
-# TODO: Fix bugs in angle calculations
 def calculate_angle(start_pos, end_pos):
     # Horizontal difference between starting and end point
     dx = end_pos[0] - start_pos[0]
@@ -133,7 +138,7 @@ def calculate_angle(start_pos, end_pos):
 
 
 # Draws arc sector angle between two lines, BA and BC
-def draw_angle(A, B, C):
+def draw_angle(A, B, C, colour):
     # Rectangle arc will be inscribed in
     rect = pygame.Rect(B.pos[0] - ARC_RADIUS, B.pos[1] - ARC_RADIUS, 2 * ARC_RADIUS, 2 * ARC_RADIUS)
 
@@ -148,10 +153,10 @@ def draw_angle(A, B, C):
 
     # Checking and drawing angle
     if angleC < angleB < angleA or angleB < angleA < angleC or angleA < angleC < angleB:
-        pygame.draw.arc(window, (255, 0, 255), rect, angleABO, angleBCO)
+        pygame.draw.arc(window, colour, rect, angleABO, angleBCO)
 
     elif angleC > angleB > angleA or angleB > angleA > angleC or angleA > angleC > angleB:
-        pygame.draw.arc(window, (255, 0, 255), rect, angleBCO, angleABO)
+        pygame.draw.arc(window, colour, rect, angleBCO, angleABO)
 
 
 # Calculate the number of points on the circumference first
@@ -175,32 +180,55 @@ while running:
             # Finds index of point clicked on
             point_index = point_clicked_on(position)
 
-            #
+            # Sets new selected point, and position of that point to the new position on the circumference
             points[point_index].pos = closest_point(position)
             point_selected = points[point_index]
+
+    # Repaints over the surface with
+    window.fill((0, 0, 0))
 
     # Draws big circle
     pygame.draw.circle(window, CIRCLE_COL, CENTER, RADIUS, CIRCLE_THICKNESS)
 
     # Draws points and lines connecting points
-    for index, point in enumerate(points):
-        pygame.draw.line(window, LINE_COL, point.pos, points[(index + 1) % len(points)].pos)
-        point.draw()
+    for starting_point, ending_point in zip(points[:-1], points[1:]):
+        starting_point.draw_line(ending_point, window, LINE_COL)
 
-    # Draws angle between selected point and adjacent points
-    draw_angle(points[(point_index - 1) % len(points)],
-               points[point_index],
-               points[(point_index + 1) % len(points)])
+    # Connects first and last point to form closed loop
+    points[-1].draw_line(points[0], window, LINE_COL)
 
-    draw_angle(points[(point_index + 1) % len(points)],
-               points[(point_index + 2) % len(points)],
-               points[(point_index + 3) % len(points)])
+    for point in points:
+        point.draw(window)
+
+        # Calculates angle between each point and center of circle
+        point.calculate_angle(CENTER)
+
+        # Gets the angle of the point in degrees
+        angle_in_degrees = int(180 * point.angle / math.pi)
+
+        # Calculates place to display angle, readjust to give top right position of text placement
+
+        display_angle_position = (point.pos[0] - 40 * math.cos(point.angle) - 9,
+                                  point.pos[1] + 40 * math.sin(point.angle) - 5)
+
+        # Convert from radians to degrees for display
+        FONT.render_to(window, display_angle_position, str(angle_in_degrees), (255, 255, 255))
 
     # Highlight selected point by drawing over top with a yellow circle
     pygame.draw.circle(window, [255, 255, 0], points[point_index].pos, CIRCLE_THICKNESS)
 
+    # Draws angle between selected point and adjacent points
+    for i in range(len(points)):
+        points_to_form_angle_with = (points[(point_index + i) % len(points)],
+                                     points[(point_index + i + 1) % len(points)],
+                                     points[(point_index + i + 2) % len(points)])
+
+        # Unpacks tuple arguments and send in as arguments
+        if i % 2 == 0:
+            draw_angle(*points_to_form_angle_with, (255, 0, 255))
+
+        else:
+            draw_angle(*points_to_form_angle_with, (0, 255, 255))
+
     # Updates display drawn
     pygame.display.update()
-
-    # Repaints over the surface with
-    window.fill((0, 0, 0))
