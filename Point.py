@@ -8,33 +8,55 @@ from Data import Data
 
 
 class Point(Circle):
-    # Static class variables
+    """A class which represents a point. It inherits from the Circle class, as a point is a circle
+    
+    :cvar rad: The radii of all points are 10
+    """
+    
     rad = 10
     
-    BLUE = Data.BLUE
-    
-    PURPLE = Data.PURPLE
-    
     def __init__(self, window, name, pos, is_draggable):
-        super().__init__(window, Point.BLUE, self.rad, 1)
+        """Construct a new circle with the given parameters, as well as initalize others that were sent in
+        
+        :arg window: The surface upon which the shapes will be drawn
+        :arg name: The name of the specified point
+        :arg pos: The position of the point
+        :arg is_draggable: Whether or not a point can be selected, or moved accordingly
+        """
+        
+        super().__init__(window, Data.BLUE, self.rad, 1)
         self.pos = pos
         self.name = name
-        self.col = Point.BLUE
+        self.col = Data.BLUE
         self.is_draggable = is_draggable
         
-        # Angle between point and center of circle
-        self.angle = Angle(pos, Point.PURPLE, self.window, self.calculate_angle(Data.CENTER))
+        # Angle between point and center of circle - Useful for navigating using polar coordinates
+        self.angle = Angle(pos, Data.PURPLE, self.window, self.calculate_angle(Data.CENTER))
     
-    # Draws line between itself and another point
     def draw_line(self, point, colour):
+        """Draws a line between itself and another point
+        
+        :param point: Other point to connect the line to
+        :param colour: The colour of the line to be formed
+        :return:
+        """
+        
         pygame.draw.line(self.window, colour, self.pos, point.pos)
     
-    # Draws itself to canvas
     def draw(self):
+        """Draws itself to the canvas
+        
+        :return:
+        """
         pygame.draw.circle(self.window, self.col, self.pos, self.rad)
     
-    # Calculates angle between a line created by connecting point to origin and the positive x axis
     def calculate_angle(self, origin):
+        """Calculates the angle between a line created by connecting point to origin with the positive x-axis
+        
+        :param origin: The reference point, also the origin of the main circle
+        :return: The angle measure (in radians) of the angle formed in this process
+        :rtype: float
+        """
         # Horizontal difference between starting and end point
         dx = self.pos[0] - origin[0]
         
@@ -45,8 +67,8 @@ class Point(Circle):
     
     # Returns angle value
     def return_angle(self):
+        """Returns the angle value of a point
+        
+        :return: The angle position of the point
+        """
         return self.angle.angle
-    
-    # Draws the point's name onto the window
-    def display_name(self, window):
-        pass
